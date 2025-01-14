@@ -1,18 +1,38 @@
 use serde::{Deserialize, Serialize};
-use std::hash::{Hash, Hasher};
+use std::{
+    fmt::Display,
+    hash::{Hash, Hasher},
+};
 
+use crate::data::FloatingPaneCoordinates;
+use crate::input::layout::{SplitDirection, SplitSize};
 use crate::position::Position;
 
 /// Contains the position and size of a [`Pane`], or more generally of any terminal, measured
 /// in character rows and columns.
-#[derive(Clone, Copy, Default, PartialEq, Debug, Serialize, Deserialize, Eq, Hash)]
+#[derive(Clone, Copy, Default, Debug, Serialize, Deserialize, Hash)]
 pub struct PaneGeom {
     pub x: usize,
     pub y: usize,
     pub rows: Dimension,
     pub cols: Dimension,
     pub is_stacked: bool,
+    pub is_pinned: bool,                 // only relevant to floating panes
+    pub logical_position: Option<usize>, // relevant when placing this pane in a layout
 }
+
+impl PartialEq for PaneGeom {
+    fn eq(&self, other: &Self) -> bool {
+        // compare all except is_pinned
+        self.x == other.x
+            && self.y == other.y
+            && self.rows == other.rows
+            && self.cols == other.cols
+            && self.is_stacked == other.is_stacked
+    }
+}
+
+impl Eq for PaneGeom {}
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Viewport {
@@ -20,6 +40,12 @@ pub struct Viewport {
     pub y: usize,
     pub rows: usize,
     pub cols: usize,
+}
+
+impl Viewport {
+    pub fn has_positive_size(&self) -> bool {
+        self.rows > 0 && self.cols > 0
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -45,7 +71,7 @@ pub struct SizeInPixels {
 #[derive(Eq, Clone, Copy, PartialEq, Debug, Serialize, Deserialize, Hash)]
 pub struct Dimension {
     pub constraint: Constraint,
-    inner: usize,
+    pub(crate) inner: usize,
 }
 
 impl Default for Dimension {
@@ -100,7 +126,6 @@ impl Dimension {
                 let leftover = rounded - new_inner;
                 self.set_inner(rounded as usize);
                 leftover
-                // self.set_inner(((percent / 100.0) * full_size as f64).round() as usize);
             },
             Constraint::Fixed(fixed_size) => {
                 self.set_inner(fixed_size);
@@ -112,7 +137,7 @@ impl Dimension {
         self.inner += by;
     }
     pub fn decrease_inner(&mut self, by: usize) {
-        self.inner -= by;
+        self.inner = self.inner.saturating_sub(by);
     }
 
     pub fn is_fixed(&self) -> bool {
@@ -120,6 +145,18 @@ impl Dimension {
     }
     pub fn is_percent(&self) -> bool {
         matches!(self.constraint, Constraint::Percent(_))
+    }
+    pub fn from_split_size(split_size: SplitSize, full_size: usize) -> Self {
+        match split_size {
+            SplitSize::Fixed(fixed) => Dimension {
+                constraint: Constraint::Fixed(fixed),
+                inner: fixed,
+            },
+            SplitSize::Percent(percent) => Dimension {
+                constraint: Constraint::Percent(percent as f64),
+                inner: ((percent as f64 / 100.0) * full_size as f64).floor() as usize,
+            },
+        }
     }
 }
 
@@ -129,6 +166,17 @@ pub enum Constraint {
     Fixed(usize),
     /// Constrains the dimension to a flexible percent size of the total screen
     Percent(f64),
+}
+
+impl Display for Constraint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let actual = match self {
+            Constraint::Fixed(v) => *v as f64,
+            Constraint::Percent(v) => *v,
+        };
+        write!(f, "{}", actual)?;
+        Ok(())
+    }
 }
 
 #[allow(clippy::derive_hash_xor_eq)]
@@ -154,6 +202,62 @@ impl PaneGeom {
     }
     pub fn is_at_least_minimum_size(&self) -> bool {
         self.rows.as_usize() > 0 && self.cols.as_usize() > 0
+    }
+    pub fn is_flexible_in_direction(&self, split_direction: SplitDirection) -> bool {
+        match split_direction {
+            SplitDirection::Vertical => self.cols.is_percent(),
+            SplitDirection::Horizontal => self.rows.is_percent(),
+        }
+    }
+    pub fn adjust_coordinates(
+        &mut self,
+        floating_pane_coordinates: FloatingPaneCoordinates,
+        viewport: Viewport,
+    ) {
+        if let Some(x) = floating_pane_coordinates.x {
+            self.x = x.to_fixed(viewport.cols);
+        }
+        if let Some(y) = floating_pane_coordinates.y {
+            self.y = y.to_fixed(viewport.rows);
+        }
+        if let Some(height) = floating_pane_coordinates.height {
+            self.rows = Dimension::from_split_size(height, viewport.rows);
+        }
+        if let Some(width) = floating_pane_coordinates.width {
+            self.cols = Dimension::from_split_size(width, viewport.cols);
+        }
+        if self.x < viewport.x {
+            self.x = viewport.x;
+        } else if self.x > viewport.x + viewport.cols {
+            self.x = (viewport.x + viewport.cols).saturating_sub(self.cols.as_usize());
+        }
+        if self.y < viewport.y {
+            self.y = viewport.y;
+        } else if self.y > viewport.y + viewport.rows {
+            self.y = (viewport.y + viewport.rows).saturating_sub(self.rows.as_usize());
+        }
+        if self.x + self.cols.as_usize() > viewport.x + viewport.cols {
+            let new_cols = (viewport.x + viewport.cols).saturating_sub(self.x);
+            self.cols.set_inner(new_cols);
+        }
+        if self.y + self.rows.as_usize() > viewport.y + viewport.rows {
+            let new_rows = (viewport.y + viewport.rows).saturating_sub(self.y);
+            self.rows.set_inner(new_rows);
+        }
+    }
+}
+
+impl Display for PaneGeom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{ ")?;
+        write!(f, r#""x": {},"#, self.x)?;
+        write!(f, r#""y": {},"#, self.y)?;
+        write!(f, r#""cols": {},"#, self.cols.constraint)?;
+        write!(f, r#""rows": {},"#, self.rows.constraint)?;
+        write!(f, r#""stacked": {}"#, self.is_stacked)?;
+        write!(f, " }}")?;
+
+        Ok(())
     }
 }
 

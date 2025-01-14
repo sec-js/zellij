@@ -51,7 +51,7 @@ pub fn render_tab(
     let right_separator = style!(background_color, foreground_color).paint(separator);
     let tab_styled_text = if !focused_clients.is_empty() {
         let (cursor_section, extra_length) = cursors(focused_clients, palette);
-        tab_text_len += extra_length;
+        tab_text_len += extra_length + 2; // 2 for cursor_beginning and cursor_end
         let mut s = String::new();
         let cursor_beginning = style!(foreground_color, background_color)
             .bold()
@@ -89,8 +89,10 @@ pub fn tab_style(
 ) -> LinePart {
     let separator = tab_separator(capabilities);
 
-    if tab.is_sync_panes_active {
-        tabname.push_str(" (Sync)");
+    if tab.is_fullscreen_active {
+        tabname.push_str(" (FULLSCREEN)");
+    } else if tab.is_sync_panes_active {
+        tabname.push_str(" (SYNC)");
     }
     // we only color alternate tabs differently if we can't use the arrow fonts to separate them
     if !capabilities.arrow_fonts {
@@ -98,4 +100,33 @@ pub fn tab_style(
     }
 
     render_tab(tabname, tab, is_alternate_tab, palette, separator)
+}
+
+pub(crate) fn get_tab_to_focus(
+    tab_line: &[LinePart],
+    active_tab_idx: usize,
+    mouse_click_col: usize,
+) -> Option<usize> {
+    let clicked_line_part = get_clicked_line_part(tab_line, mouse_click_col)?;
+    let clicked_tab_idx = clicked_line_part.tab_index?;
+    // tabs are indexed starting from 1 so we need to add 1
+    let clicked_tab_idx = clicked_tab_idx + 1;
+    if clicked_tab_idx != active_tab_idx {
+        return Some(clicked_tab_idx);
+    }
+    None
+}
+
+pub(crate) fn get_clicked_line_part(
+    tab_line: &[LinePart],
+    mouse_click_col: usize,
+) -> Option<&LinePart> {
+    let mut len = 0;
+    for tab_line_part in tab_line {
+        if mouse_click_col >= len && mouse_click_col < len + tab_line_part.len {
+            return Some(tab_line_part);
+        }
+        len += tab_line_part.len;
+    }
+    None
 }

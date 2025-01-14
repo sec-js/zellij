@@ -30,7 +30,14 @@ use zellij_utils::{
 struct FakeInputOutput {}
 
 impl ServerOsApi for FakeInputOutput {
-    fn set_terminal_size_using_terminal_id(&self, _id: u32, _cols: u16, _rows: u16) -> Result<()> {
+    fn set_terminal_size_using_terminal_id(
+        &self,
+        _id: u32,
+        _cols: u16,
+        _rows: u16,
+        _width_in_pixels: Option<u16>,
+        _height_in_pixels: Option<u16>,
+    ) -> Result<()> {
         // noop
         Ok(())
     }
@@ -157,6 +164,10 @@ fn create_new_tab(size: Size) -> Tab {
     let copy_options = CopyOptions::default();
     let sixel_image_store = Rc::new(RefCell::new(SixelImageStore::default()));
     let terminal_emulator_color_codes = Rc::new(RefCell::new(HashMap::new()));
+    let debug = false;
+    let arrow_fonts = true;
+    let styled_underlines = true;
+    let explicitly_disable_kitty_keyboard_protocol = false;
     let mut tab = Tab::new(
         index,
         position,
@@ -173,11 +184,16 @@ fn create_new_tab(size: Size) -> Tab {
         auto_layout,
         connected_clients,
         session_is_mirrored,
-        client_id,
+        Some(client_id),
         copy_options,
         terminal_emulator_colors,
         terminal_emulator_color_codes,
         (vec![], vec![]), // swap layouts
+        None,
+        debug,
+        arrow_fonts,
+        styled_underlines,
+        explicitly_disable_kitty_keyboard_protocol,
     );
     tab.apply_layout(
         TiledPaneLayout::default(),
@@ -212,6 +228,10 @@ fn create_new_tab_with_layout(size: Size, layout: TiledPaneLayout) -> Tab {
     let copy_options = CopyOptions::default();
     let sixel_image_store = Rc::new(RefCell::new(SixelImageStore::default()));
     let terminal_emulator_color_codes = Rc::new(RefCell::new(HashMap::new()));
+    let debug = false;
+    let arrow_fonts = true;
+    let styled_underlines = true;
+    let explicitly_disable_kitty_keyboard_protocol = false;
     let mut tab = Tab::new(
         index,
         position,
@@ -228,11 +248,16 @@ fn create_new_tab_with_layout(size: Size, layout: TiledPaneLayout) -> Tab {
         auto_layout,
         connected_clients,
         session_is_mirrored,
-        client_id,
+        Some(client_id),
         copy_options,
         terminal_emulator_colors,
         terminal_emulator_color_codes,
         (vec![], vec![]), // swap layouts
+        None,
+        debug,
+        arrow_fonts,
+        styled_underlines,
+        explicitly_disable_kitty_keyboard_protocol,
     );
     let mut new_terminal_ids = vec![];
     for i in 0..layout.extract_run_instructions().len() {
@@ -273,6 +298,10 @@ fn create_new_tab_with_cell_size(
     let copy_options = CopyOptions::default();
     let sixel_image_store = Rc::new(RefCell::new(SixelImageStore::default()));
     let terminal_emulator_color_codes = Rc::new(RefCell::new(HashMap::new()));
+    let debug = false;
+    let arrow_fonts = true;
+    let styled_underlines = true;
+    let explicitly_disable_kitty_keyboard_protocol = false;
     let mut tab = Tab::new(
         index,
         position,
@@ -289,11 +318,16 @@ fn create_new_tab_with_cell_size(
         auto_layout,
         connected_clients,
         session_is_mirrored,
-        client_id,
+        Some(client_id),
         copy_options,
         terminal_emulator_colors,
         terminal_emulator_color_codes,
         (vec![], vec![]), // swap layouts
+        None,
+        debug,
+        arrow_fonts,
+        styled_underlines,
+        explicitly_disable_kitty_keyboard_protocol,
     );
     tab.apply_layout(
         TiledPaneLayout::default(),
@@ -317,14 +351,21 @@ fn write_to_suppressed_pane() {
     tab.vertical_split(PaneId::Terminal(2), None, 1).unwrap();
 
     // Suppress pane 2 and remove it from active panes
-    tab.suppress_active_pane(PaneId::Terminal(2), 1).unwrap();
+    tab.replace_active_pane_with_editor_pane(PaneId::Terminal(2), 1)
+        .unwrap();
     tab.tiled_panes.remove_pane(PaneId::Terminal(2));
 
     // Make sure it's suppressed now
     tab.suppressed_panes.get(&PaneId::Terminal(2)).unwrap();
     // Write content to it
-    tab.write_to_pane_id(vec![34, 127, 31, 82, 17, 182], PaneId::Terminal(2))
-        .unwrap();
+    tab.write_to_pane_id(
+        &None,
+        vec![34, 127, 31, 82, 17, 182],
+        false,
+        PaneId::Terminal(2),
+        None,
+    )
+    .unwrap();
 }
 
 #[test]
@@ -530,7 +571,8 @@ fn split_largest_pane() {
     let mut tab = create_new_tab(size);
     for i in 2..5 {
         let new_pane_id = PaneId::Terminal(i);
-        tab.new_pane(new_pane_id, None, None, Some(1)).unwrap();
+        tab.new_pane(new_pane_id, None, None, None, None, false, Some(1))
+            .unwrap();
     }
     assert_eq!(tab.tiled_panes.panes.len(), 4, "The tab has four panes");
 
@@ -735,7 +777,7 @@ pub fn cannot_split_panes_horizontally_when_active_pane_is_too_small() {
 pub fn cannot_split_largest_pane_when_there_is_no_room() {
     let size = Size { cols: 8, rows: 4 };
     let mut tab = create_new_tab(size);
-    tab.new_pane(PaneId::Terminal(2), None, None, Some(1))
+    tab.new_pane(PaneId::Terminal(2), None, None, None, None, false, Some(1))
         .unwrap();
     assert_eq!(
         tab.tiled_panes.panes.len(),
@@ -779,7 +821,8 @@ pub fn toggle_focused_pane_fullscreen() {
     let mut tab = create_new_tab(size);
     for i in 2..5 {
         let new_pane_id = PaneId::Terminal(i);
-        tab.new_pane(new_pane_id, None, None, Some(1)).unwrap();
+        tab.new_pane(new_pane_id, None, None, None, None, false, Some(1))
+            .unwrap();
     }
     tab.toggle_active_pane_fullscreen(1);
     assert_eq!(
@@ -853,16 +896,16 @@ fn switch_to_next_pane_fullscreen() {
     let mut active_tab = create_new_tab(size);
 
     active_tab
-        .new_pane(PaneId::Terminal(1), None, None, Some(1))
+        .new_pane(PaneId::Terminal(1), None, None, None, None, false, Some(1))
         .unwrap();
     active_tab
-        .new_pane(PaneId::Terminal(2), None, None, Some(1))
+        .new_pane(PaneId::Terminal(2), None, None, None, None, false, Some(1))
         .unwrap();
     active_tab
-        .new_pane(PaneId::Terminal(3), None, None, Some(1))
+        .new_pane(PaneId::Terminal(3), None, None, None, None, false, Some(1))
         .unwrap();
     active_tab
-        .new_pane(PaneId::Terminal(4), None, None, Some(1))
+        .new_pane(PaneId::Terminal(4), None, None, None, None, false, Some(1))
         .unwrap();
     active_tab.toggle_active_pane_fullscreen(1);
 
@@ -893,16 +936,16 @@ fn switch_to_prev_pane_fullscreen() {
     //testing four consecutive switches in fullscreen mode
 
     active_tab
-        .new_pane(PaneId::Terminal(1), None, None, Some(1))
+        .new_pane(PaneId::Terminal(1), None, None, None, None, false, Some(1))
         .unwrap();
     active_tab
-        .new_pane(PaneId::Terminal(2), None, None, Some(1))
+        .new_pane(PaneId::Terminal(2), None, None, None, None, false, Some(1))
         .unwrap();
     active_tab
-        .new_pane(PaneId::Terminal(3), None, None, Some(1))
+        .new_pane(PaneId::Terminal(3), None, None, None, None, false, Some(1))
         .unwrap();
     active_tab
-        .new_pane(PaneId::Terminal(4), None, None, Some(1))
+        .new_pane(PaneId::Terminal(4), None, None, None, None, false, Some(1))
         .unwrap();
     active_tab.toggle_active_pane_fullscreen(1);
     // order is now 1 2 3 4
@@ -14384,9 +14427,9 @@ fn correctly_resize_frameless_panes_on_pane_close() {
     let content_size = (pane.get_content_columns(), pane.get_content_rows());
     assert_eq!(content_size, (cols, rows));
 
-    tab.new_pane(PaneId::Terminal(2), None, None, Some(1))
+    tab.new_pane(PaneId::Terminal(2), None, None, None, None, false, Some(1))
         .unwrap();
-    tab.close_pane(PaneId::Terminal(2), true, None);
+    tab.close_pane(PaneId::Terminal(2), true);
 
     // the size should be the same after adding and then removing a pane
     let pane = tab.tiled_panes.panes.get(&PaneId::Terminal(1)).unwrap();

@@ -3,7 +3,7 @@ use super::pane_resizer::PaneResizer;
 use super::stacked_panes::StackedPanes;
 use crate::tab::{MIN_TERMINAL_HEIGHT, MIN_TERMINAL_WIDTH};
 use crate::{panes::PaneId, tab::Pane};
-use std::cmp::Reverse;
+use std::cmp::{Ordering, Reverse};
 use std::collections::{HashMap, HashSet};
 use zellij_utils::data::{Direction, Resize, ResizeStrategy};
 use zellij_utils::{
@@ -557,7 +557,7 @@ impl<'a> TiledPaneGrid<'a> {
     }
 
     fn reduce_pane_height(&mut self, id: &PaneId, percent: f64) {
-        if self.can_reduce_pane_height(id, percent).unwrap() {
+        if self.can_reduce_pane_height(id, percent).unwrap_or(false) {
             let current_pane_is_stacked = self
                 .panes
                 .borrow()
@@ -1025,6 +1025,50 @@ impl<'a> TiledPaneGrid<'a> {
             .copied();
         next_index
     }
+    pub fn pane_id_on_edge(&self, direction: Direction) -> Option<PaneId> {
+        let panes = self.panes.borrow();
+        let panes: Vec<(PaneId, &&mut Box<dyn Pane>)> = panes
+            .iter()
+            .filter(|(_, p)| p.selectable())
+            .map(|(p_id, p)| (*p_id, p))
+            .collect();
+        let next_index = panes
+            .iter()
+            .enumerate()
+            .max_by(|(_, (_, a)), (_, (_, b))| match direction {
+                Direction::Left => {
+                    let x_comparison = a.x().cmp(&b.x());
+                    match x_comparison {
+                        Ordering::Equal => b.y().cmp(&a.y()),
+                        _ => x_comparison,
+                    }
+                },
+                Direction::Right => {
+                    let x_comparison = b.x().cmp(&a.x());
+                    match x_comparison {
+                        Ordering::Equal => b.y().cmp(&a.y()),
+                        _ => x_comparison,
+                    }
+                },
+                Direction::Up => {
+                    let y_comparison = a.y().cmp(&b.y());
+                    match y_comparison {
+                        Ordering::Equal => a.x().cmp(&b.x()),
+                        _ => y_comparison,
+                    }
+                },
+                Direction::Down => {
+                    let y_comparison = b.y().cmp(&a.y());
+                    match y_comparison {
+                        Ordering::Equal => b.x().cmp(&a.x()),
+                        _ => y_comparison,
+                    }
+                },
+            })
+            .map(|(_, (pid, _))| pid)
+            .copied();
+        next_index
+    }
     pub fn next_selectable_pane_id_above(&self, current_pane_id: &PaneId) -> Option<PaneId> {
         let panes = self.panes.borrow();
         let current_pane = panes.get(current_pane_id)?;
@@ -1248,7 +1292,9 @@ impl<'a> TiledPaneGrid<'a> {
         // false => didn't succeed, so didn't do anything
         let (freed_width, freed_height, pane_to_close_is_stacked) = {
             let panes = self.panes.borrow_mut();
-            let pane_to_close = panes.get(&id).unwrap();
+            let Some(pane_to_close) = panes.get(&id) else {
+                return false;
+            };
             let freed_space = pane_to_close.position_and_size();
             let freed_width = freed_space.cols.as_percent();
             let freed_height = freed_space.rows.as_percent();
@@ -1306,7 +1352,9 @@ impl<'a> TiledPaneGrid<'a> {
             },
         );
         pane_id_to_split.and_then(|t_id_to_split| {
-            let pane_to_split = panes.get(t_id_to_split).unwrap();
+            let Some(pane_to_split) = panes.get(t_id_to_split) else {
+                return None;
+            };
             let direction = if pane_to_split.rows()
                 * cursor_height_width_ratio.unwrap_or(DEFAULT_CURSOR_HEIGHT_WIDTH_RATIO)
                 > pane_to_split.cols()
@@ -1321,6 +1369,21 @@ impl<'a> TiledPaneGrid<'a> {
 
             direction.map(|direction| (*t_id_to_split, direction))
         })
+    }
+    pub fn has_room_for_new_stacked_pane(&self) -> bool {
+        let panes = self.panes.borrow();
+        let flexible_pane_in_stack: Vec<(&PaneId, &&mut Box<dyn Pane>)> = panes
+            .iter()
+            .filter(|(_, p)| {
+                p.selectable() && p.current_geom().is_stacked && !p.current_geom().rows.is_fixed()
+            })
+            .collect();
+        flexible_pane_in_stack
+            .iter()
+            .any(|(_p_id, p)| p.current_geom().rows.as_usize() > 1)
+    }
+    pub fn make_room_in_stack_for_pane(&mut self) -> Result<PaneGeom> {
+        StackedPanes::new(self.panes.clone()).make_room_for_new_pane()
     }
 }
 
@@ -1344,11 +1407,13 @@ pub fn split(direction: SplitDirection, rect: &PaneGeom) -> Option<(PaneGeom, Pa
             SplitDirection::Vertical => PaneGeom {
                 x: first_rect.x + 1,
                 cols: first_rect.cols,
+                logical_position: None,
                 ..*rect
             },
             SplitDirection::Horizontal => PaneGeom {
                 y: first_rect.y + 1,
                 rows: first_rect.rows,
+                logical_position: None,
                 ..*rect
             },
         };

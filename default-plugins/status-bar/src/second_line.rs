@@ -15,7 +15,7 @@ use crate::{
 
 fn full_length_shortcut(
     is_first_shortcut: bool,
-    key: Vec<Key>,
+    key: Vec<KeyWithModifier>,
     action: &str,
     palette: Palette,
 ) -> LinePart {
@@ -59,7 +59,12 @@ fn locked_interface_indication(palette: Palette) -> LinePart {
     }
 }
 
-fn add_shortcut(help: &ModeInfo, linepart: &LinePart, text: &str, keys: Vec<Key>) -> LinePart {
+fn add_shortcut(
+    help: &ModeInfo,
+    linepart: &LinePart,
+    text: &str,
+    keys: Vec<KeyWithModifier>,
+) -> LinePart {
     let shortcut = if linepart.len == 0 {
         full_length_shortcut(true, keys, text, help.style.colors)
     } else {
@@ -106,7 +111,7 @@ fn full_shortcut_list_nonstandard_mode(help: &ModeInfo) -> LinePart {
 // three times the length and all the keybinding vectors we generate become virtually unreadable
 // for humans.
 #[rustfmt::skip]
-fn get_keys_and_hints(mi: &ModeInfo) -> Vec<(String, String, Vec<Key>)> {
+fn get_keys_and_hints(mi: &ModeInfo) -> Vec<(String, String, Vec<KeyWithModifier>)> {
     use Action as A;
     use InputMode as IM;
     use Direction as Dir;
@@ -119,8 +124,8 @@ fn get_keys_and_hints(mi: &ModeInfo) -> Vec<(String, String, Vec<Key>)> {
     // Find a keybinding to get back to "Normal" input mode. In this case we prefer '\n' over other
     // choices. Do it here before we dedupe the keymap below!
     let to_normal_keys = action_key(&old_keymap, &[TO_NORMAL]);
-    let to_normal_key = if to_normal_keys.contains(&Key::Char('\n')) {
-        vec![Key::Char('\n')]
+    let to_normal_key = if to_normal_keys.contains(&KeyWithModifier::new(BareKey::Enter)) {
+        vec![KeyWithModifier::new(BareKey::Enter)]
     } else {
         // Yield `vec![key]` if `to_normal_keys` has at least one key, or an empty vec otherwise.
         to_normal_keys.into_iter().take(1).collect()
@@ -144,21 +149,17 @@ fn get_keys_and_hints(mi: &ModeInfo) -> Vec<(String, String, Vec<Key>)> {
     }
 
     if mi.mode == IM::Pane { vec![
-        (s("Move focus"), s("Move"),
+        (s("New"), s("New"), action_key(&km, &[A::NewPane(None, None, false), TO_NORMAL])),
+        (s("Change Focus"), s("Move"),
             action_key_group(&km, &[&[A::MoveFocus(Dir::Left)], &[A::MoveFocus(Dir::Down)],
                 &[A::MoveFocus(Dir::Up)], &[A::MoveFocus(Dir::Right)]])),
-        (s("New"), s("New"), action_key(&km, &[A::NewPane(None, None), TO_NORMAL])),
         (s("Close"), s("Close"), action_key(&km, &[A::CloseFocus, TO_NORMAL])),
         (s("Rename"), s("Rename"),
             action_key(&km, &[A::SwitchToMode(IM::RenamePane), A::PaneNameInput(vec![0])])),
-        (s("Split down"), s("Down"), action_key(&km, &[A::NewPane(Some(Dir::Down), None), TO_NORMAL])),
-        (s("Split right"), s("Right"), action_key(&km, &[A::NewPane(Some(Dir::Right), None), TO_NORMAL])),
-        (s("Fullscreen"), s("Fullscreen"), action_key(&km, &[A::ToggleFocusFullscreen, TO_NORMAL])),
-        (s("Frames"), s("Frames"), action_key(&km, &[A::TogglePaneFrames, TO_NORMAL])),
-        (s("Floating toggle"), s("Floating"),
+        (s("Toggle Fullscreen"), s("Fullscreen"), action_key(&km, &[A::ToggleFocusFullscreen, TO_NORMAL])),
+        (s("Toggle Floating"), s("Floating"),
             action_key(&km, &[A::ToggleFloatingPanes, TO_NORMAL])),
-        (s("Embed pane"), s("Embed"), action_key(&km, &[A::TogglePaneEmbedOrFloating, TO_NORMAL])),
-        (s("Next"), s("Next"), action_key(&km, &[A::SwitchFocus])),
+        (s("Toggle Embed"), s("Embed"), action_key(&km, &[A::TogglePaneEmbedOrFloating, TO_NORMAL])),
         (s("Select pane"), s("Select"), to_normal_key),
     ]} else if mi.mode == IM::Tab {
         // With the default bindings, "Move focus" for tabs is tricky: It binds all the arrow keys
@@ -168,25 +169,35 @@ fn get_keys_and_hints(mi: &ModeInfo) -> Vec<(String, String, Vec<Key>)> {
         // RightArrow.
         // FIXME: So for lack of a better idea we just check this case manually here.
         let old_keymap = mi.get_mode_keybinds();
-        let focus_keys_full: Vec<Key> = action_key_group(&old_keymap,
+        let focus_keys_full: Vec<KeyWithModifier> = action_key_group(&old_keymap,
             &[&[A::GoToPreviousTab], &[A::GoToNextTab]]);
-        let focus_keys = if focus_keys_full.contains(&Key::Left)
-            && focus_keys_full.contains(&Key::Right) {
-            vec![Key::Left, Key::Right]
+        let focus_keys = if focus_keys_full.contains(&KeyWithModifier::new(BareKey::Left))
+            && focus_keys_full.contains(&KeyWithModifier::new(BareKey::Right)) {
+            vec![KeyWithModifier::new(BareKey::Left), KeyWithModifier::new(BareKey::Right)]
         } else {
             action_key_group(&km, &[&[A::GoToPreviousTab], &[A::GoToNextTab]])
         };
 
         vec![
-        (s("Move focus"), s("Move"), focus_keys),
-        (s("New"), s("New"), action_key(&km, &[A::NewTab(None, vec![], None, None, None), TO_NORMAL])),
+        (s("New"), s("New"), action_key(&km, &[A::NewTab(None, vec![], None, None, None, true), TO_NORMAL])),
+        (s("Change focus"), s("Move"), focus_keys),
         (s("Close"), s("Close"), action_key(&km, &[A::CloseTab, TO_NORMAL])),
         (s("Rename"), s("Rename"),
             action_key(&km, &[A::SwitchToMode(IM::RenameTab), A::TabNameInput(vec![0])])),
         (s("Sync"), s("Sync"), action_key(&km, &[A::ToggleActiveSyncTab, TO_NORMAL])),
+        (s("Break pane to new tab"), s("Break out"), action_key(&km, &[A::BreakPane, TO_NORMAL])),
+        (s("Break pane left/right"), s("Break"), action_key_group(&km, &[
+            &[Action::BreakPaneLeft, TO_NORMAL],
+            &[Action::BreakPaneRight, TO_NORMAL],
+        ])),
         (s("Toggle"), s("Toggle"), action_key(&km, &[A::ToggleTab])),
         (s("Select pane"), s("Select"), to_normal_key),
     ]} else if mi.mode == IM::Resize { vec![
+        (s("Increase/Decrease size"), s("Increase/Decrease"),
+            action_key_group(&km, &[
+                &[A::Resize(Resize::Increase, None)],
+                &[A::Resize(Resize::Decrease, None)]
+            ])),
         (s("Increase to"), s("Increase"), action_key_group(&km, &[
             &[A::Resize(Resize::Increase, Some(Dir::Left))],
             &[A::Resize(Resize::Increase, Some(Dir::Down))],
@@ -199,19 +210,14 @@ fn get_keys_and_hints(mi: &ModeInfo) -> Vec<(String, String, Vec<Key>)> {
             &[A::Resize(Resize::Decrease, Some(Dir::Up))],
             &[A::Resize(Resize::Decrease, Some(Dir::Right))]
             ])),
-        (s("Increase/Decrease size"), s("Increase/Decrease"),
-            action_key_group(&km, &[
-                &[A::Resize(Resize::Increase, None)],
-                &[A::Resize(Resize::Decrease, None)]
-            ])),
         (s("Select pane"), s("Select"), to_normal_key),
     ]} else if mi.mode == IM::Move { vec![
-        (s("Move"), s("Move"), action_key_group(&km, &[
+        (s("Switch Location"), s("Move"), action_key_group(&km, &[
             &[Action::MovePane(Some(Dir::Left))], &[Action::MovePane(Some(Dir::Down))],
             &[Action::MovePane(Some(Dir::Up))], &[Action::MovePane(Some(Dir::Right))]])),
-        (s("Next pane"), s("Next"), action_key(&km, &[Action::MovePane(None)])),
-        (s("Previous pane"), s("Previous"), action_key(&km, &[Action::MovePaneBackwards])),
     ]} else if mi.mode == IM::Scroll { vec![
+        (s("Enter search term"), s("Search"),
+            action_key(&km, &[A::SwitchToMode(IM::EnterSearch), A::SearchInput(vec![0])])),
         (s("Scroll"), s("Scroll"),
             action_key_group(&km, &[&[Action::ScrollDown], &[Action::ScrollUp]])),
         (s("Scroll page"), s("Scroll"),
@@ -220,22 +226,20 @@ fn get_keys_and_hints(mi: &ModeInfo) -> Vec<(String, String, Vec<Key>)> {
             action_key_group(&km, &[&[Action::HalfPageScrollDown], &[Action::HalfPageScrollUp]])),
         (s("Edit scrollback in default editor"), s("Edit"),
             action_key(&km, &[Action::EditScrollback, TO_NORMAL])),
-        (s("Enter search term"), s("Search"),
-            action_key(&km, &[A::SwitchToMode(IM::EnterSearch), A::SearchInput(vec![0])])),
         (s("Select pane"), s("Select"), to_normal_key),
     ]} else if mi.mode == IM::EnterSearch { vec![
         (s("When done"), s("Done"), action_key(&km, &[A::SwitchToMode(IM::Search)])),
         (s("Cancel"), s("Cancel"),
             action_key(&km, &[A::SearchInput(vec![27]), A::SwitchToMode(IM::Scroll)])),
     ]} else if mi.mode == IM::Search { vec![
+        (s("Enter Search term"), s("Search"),
+            action_key(&km, &[A::SwitchToMode(IM::EnterSearch), A::SearchInput(vec![0])])),
         (s("Scroll"), s("Scroll"),
             action_key_group(&km, &[&[Action::ScrollDown], &[Action::ScrollUp]])),
         (s("Scroll page"), s("Scroll"),
             action_key_group(&km, &[&[Action::PageScrollDown], &[Action::PageScrollUp]])),
         (s("Scroll half page"), s("Scroll"),
             action_key_group(&km, &[&[Action::HalfPageScrollDown], &[Action::HalfPageScrollUp]])),
-        (s("Enter term"), s("Search"),
-            action_key(&km, &[A::SwitchToMode(IM::EnterSearch), A::SearchInput(vec![0])])),
         (s("Search down"), s("Down"), action_key(&km, &[A::Search(SDir::Down)])),
         (s("Search up"), s("Up"), action_key(&km, &[A::Search(SDir::Up)])),
         (s("Case sensitive"), s("Case"),
@@ -246,15 +250,16 @@ fn get_keys_and_hints(mi: &ModeInfo) -> Vec<(String, String, Vec<Key>)> {
             action_key(&km, &[A::SearchToggleOption(SOpt::WholeWord)])),
     ]} else if mi.mode == IM::Session { vec![
         (s("Detach"), s("Detach"), action_key(&km, &[Action::Detach])),
+        (s("Session Manager"), s("Manager"), action_key(&km, &[A::LaunchOrFocusPlugin(Default::default(), true, true, false, false), TO_NORMAL])), // not entirely accurate
         (s("Select pane"), s("Select"), to_normal_key),
     ]} else if mi.mode == IM::Tmux { vec![
         (s("Move focus"), s("Move"), action_key_group(&km, &[
             &[A::MoveFocus(Dir::Left)], &[A::MoveFocus(Dir::Down)],
             &[A::MoveFocus(Dir::Up)], &[A::MoveFocus(Dir::Right)]])),
-        (s("Split down"), s("Down"), action_key(&km, &[A::NewPane(Some(Dir::Down), None), TO_NORMAL])),
-        (s("Split right"), s("Right"), action_key(&km, &[A::NewPane(Some(Dir::Right), None), TO_NORMAL])),
+        (s("Split down"), s("Down"), action_key(&km, &[A::NewPane(Some(Dir::Down), None, false), TO_NORMAL])),
+        (s("Split right"), s("Right"), action_key(&km, &[A::NewPane(Some(Dir::Right), None, false), TO_NORMAL])),
         (s("Fullscreen"), s("Fullscreen"), action_key(&km, &[A::ToggleFocusFullscreen, TO_NORMAL])),
-        (s("New tab"), s("New"), action_key(&km, &[A::NewTab(None, vec![], None, None, None), TO_NORMAL])),
+        (s("New tab"), s("New"), action_key(&km, &[A::NewTab(None, vec![], None, None, None, true), TO_NORMAL])),
         (s("Rename tab"), s("Rename"),
             action_key(&km, &[A::SwitchToMode(IM::RenameTab), A::TabNameInput(vec![0])])),
         (s("Previous Tab"), s("Previous"), action_key(&km, &[A::GoToPreviousTab, TO_NORMAL])),
@@ -429,7 +434,7 @@ pub fn floating_panes_are_visible(mode_info: &ModeInfo) -> LinePart {
         "{}",
         action_key(km, &[Action::SwitchToMode(InputMode::Pane)])
             .first()
-            .unwrap_or(&Key::Char('?'))
+            .unwrap_or(&KeyWithModifier::new(BareKey::Char('?')))
     );
     let plus = ", ";
     let p_left_separator = "<";
@@ -440,7 +445,7 @@ pub fn floating_panes_are_visible(mode_info: &ModeInfo) -> LinePart {
             &[Action::ToggleFloatingPanes, TO_NORMAL]
         )
         .first()
-        .unwrap_or(&Key::Char('?'))
+        .unwrap_or(&KeyWithModifier::new(BareKey::Char('?')))
     );
     let p_right_separator = "> ";
     let to_hide = "to hide.";
@@ -560,7 +565,7 @@ mod tests {
 
     #[test]
     fn full_length_shortcut_with_key() {
-        let keyvec = vec![Key::Char('a')];
+        let keyvec = vec![KeyWithModifier::new(BareKey::Char('a'))];
         let palette = get_palette();
 
         let ret = full_length_shortcut(false, keyvec, "Foobar", palette);
@@ -571,7 +576,7 @@ mod tests {
 
     #[test]
     fn full_length_shortcut_with_key_first_element() {
-        let keyvec = vec![Key::Char('a')];
+        let keyvec = vec![KeyWithModifier::new(BareKey::Char('a'))];
         let palette = get_palette();
 
         let ret = full_length_shortcut(true, keyvec, "Foobar", palette);
@@ -594,7 +599,7 @@ mod tests {
 
     #[test]
     fn full_length_shortcut_with_key_unprintable_1() {
-        let keyvec = vec![Key::Char('\n')];
+        let keyvec = vec![KeyWithModifier::new(BareKey::Enter)];
         let palette = get_palette();
 
         let ret = full_length_shortcut(false, keyvec, "Foobar", palette);
@@ -605,7 +610,7 @@ mod tests {
 
     #[test]
     fn full_length_shortcut_with_key_unprintable_2() {
-        let keyvec = vec![Key::Backspace];
+        let keyvec = vec![KeyWithModifier::new(BareKey::Backspace)];
         let palette = get_palette();
 
         let ret = full_length_shortcut(false, keyvec, "Foobar", palette);
@@ -616,7 +621,7 @@ mod tests {
 
     #[test]
     fn full_length_shortcut_with_ctrl_key() {
-        let keyvec = vec![Key::Ctrl('a')];
+        let keyvec = vec![KeyWithModifier::new(BareKey::Char('a')).with_ctrl_modifier()];
         let palette = get_palette();
 
         let ret = full_length_shortcut(false, keyvec, "Foobar", palette);
@@ -627,7 +632,7 @@ mod tests {
 
     #[test]
     fn full_length_shortcut_with_alt_key() {
-        let keyvec = vec![Key::Alt(CharOrArrow::Char('a'))];
+        let keyvec = vec![KeyWithModifier::new(BareKey::Char('a')).with_alt_modifier()];
         let palette = get_palette();
 
         let ret = full_length_shortcut(false, keyvec, "Foobar", palette);
@@ -638,7 +643,11 @@ mod tests {
 
     #[test]
     fn full_length_shortcut_with_homogenous_key_group() {
-        let keyvec = vec![Key::Char('a'), Key::Char('b'), Key::Char('c')];
+        let keyvec = vec![
+            KeyWithModifier::new(BareKey::Char('a')),
+            KeyWithModifier::new(BareKey::Char('b')),
+            KeyWithModifier::new(BareKey::Char('c')),
+        ];
         let palette = get_palette();
 
         let ret = full_length_shortcut(false, keyvec, "Foobar", palette);
@@ -649,18 +658,26 @@ mod tests {
 
     #[test]
     fn full_length_shortcut_with_heterogenous_key_group() {
-        let keyvec = vec![Key::Char('a'), Key::Ctrl('b'), Key::Char('\n')];
+        let keyvec = vec![
+            KeyWithModifier::new(BareKey::Char('a')),
+            KeyWithModifier::new(BareKey::Char('b')).with_ctrl_modifier(),
+            KeyWithModifier::new(BareKey::Enter),
+        ];
         let palette = get_palette();
 
         let ret = full_length_shortcut(false, keyvec, "Foobar", palette);
         let ret = unstyle(ret);
 
-        assert_eq!(ret, " / <a|Ctrl+b|ENTER> Foobar");
+        assert_eq!(ret, " / <a|Ctrl b|ENTER> Foobar");
     }
 
     #[test]
     fn full_length_shortcut_with_key_group_shared_ctrl_modifier() {
-        let keyvec = vec![Key::Ctrl('a'), Key::Ctrl('b'), Key::Ctrl('c')];
+        let keyvec = vec![
+            KeyWithModifier::new(BareKey::Char('a')).with_ctrl_modifier(),
+            KeyWithModifier::new(BareKey::Char('b')).with_ctrl_modifier(),
+            KeyWithModifier::new(BareKey::Char('c')).with_ctrl_modifier(),
+        ];
         let palette = get_palette();
 
         let ret = full_length_shortcut(false, keyvec, "Foobar", palette);
@@ -678,14 +695,32 @@ mod tests {
             keybinds: vec![(
                 InputMode::Pane,
                 vec![
-                    (Key::Left, vec![Action::MoveFocus(Direction::Left)]),
-                    (Key::Down, vec![Action::MoveFocus(Direction::Down)]),
-                    (Key::Up, vec![Action::MoveFocus(Direction::Up)]),
-                    (Key::Right, vec![Action::MoveFocus(Direction::Right)]),
-                    (Key::Char('n'), vec![Action::NewPane(None, None), TO_NORMAL]),
-                    (Key::Char('x'), vec![Action::CloseFocus, TO_NORMAL]),
                     (
-                        Key::Char('f'),
+                        KeyWithModifier::new(BareKey::Left),
+                        vec![Action::MoveFocus(Direction::Left)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Down),
+                        vec![Action::MoveFocus(Direction::Down)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Up),
+                        vec![Action::MoveFocus(Direction::Up)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Right),
+                        vec![Action::MoveFocus(Direction::Right)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Char('n')),
+                        vec![Action::NewPane(None, None, false), TO_NORMAL],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Char('x')),
+                        vec![Action::CloseFocus, TO_NORMAL],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Char('f')),
                         vec![Action::ToggleFocusFullscreen, TO_NORMAL],
                     ),
                 ],
@@ -698,7 +733,7 @@ mod tests {
 
         assert_eq!(
             ret,
-            " <←↓↑→> Move focus / <n> New / <x> Close / <f> Fullscreen"
+            " <n> New / <←↓↑→> Change Focus / <x> Close / <f> Toggle Fullscreen",
         );
     }
 
@@ -710,14 +745,32 @@ mod tests {
             keybinds: vec![(
                 InputMode::Pane,
                 vec![
-                    (Key::Left, vec![Action::MoveFocus(Direction::Left)]),
-                    (Key::Down, vec![Action::MoveFocus(Direction::Down)]),
-                    (Key::Up, vec![Action::MoveFocus(Direction::Up)]),
-                    (Key::Right, vec![Action::MoveFocus(Direction::Right)]),
-                    (Key::Char('n'), vec![Action::NewPane(None, None), TO_NORMAL]),
-                    (Key::Char('x'), vec![Action::CloseFocus, TO_NORMAL]),
                     (
-                        Key::Char('f'),
+                        KeyWithModifier::new(BareKey::Left),
+                        vec![Action::MoveFocus(Direction::Left)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Down),
+                        vec![Action::MoveFocus(Direction::Down)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Up),
+                        vec![Action::MoveFocus(Direction::Up)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Right),
+                        vec![Action::MoveFocus(Direction::Right)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Char('n')),
+                        vec![Action::NewPane(None, None, false), TO_NORMAL],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Char('x')),
+                        vec![Action::CloseFocus, TO_NORMAL],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Char('f')),
                         vec![Action::ToggleFocusFullscreen, TO_NORMAL],
                     ),
                 ],
@@ -728,7 +781,7 @@ mod tests {
         let ret = keybinds(&mode_info, "quicknav", 35);
         let ret = unstyle(ret);
 
-        assert_eq!(ret, " <←↓↑→> Move / <n> New ... ");
+        assert_eq!(ret, " <n> New / <←↓↑→> Move ... ");
     }
 
     #[test]
@@ -738,13 +791,34 @@ mod tests {
             keybinds: vec![(
                 InputMode::Pane,
                 vec![
-                    (Key::Ctrl('a'), vec![Action::MoveFocus(Direction::Left)]),
-                    (Key::Ctrl('\n'), vec![Action::MoveFocus(Direction::Down)]),
-                    (Key::Ctrl('1'), vec![Action::MoveFocus(Direction::Up)]),
-                    (Key::Ctrl(' '), vec![Action::MoveFocus(Direction::Right)]),
-                    (Key::Backspace, vec![Action::NewPane(None, None), TO_NORMAL]),
-                    (Key::Esc, vec![Action::CloseFocus, TO_NORMAL]),
-                    (Key::End, vec![Action::ToggleFocusFullscreen, TO_NORMAL]),
+                    (
+                        KeyWithModifier::new(BareKey::Char('a')).with_ctrl_modifier(),
+                        vec![Action::MoveFocus(Direction::Left)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Enter).with_ctrl_modifier(),
+                        vec![Action::MoveFocus(Direction::Down)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Char('1')).with_ctrl_modifier(),
+                        vec![Action::MoveFocus(Direction::Up)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Char(' ')).with_ctrl_modifier(),
+                        vec![Action::MoveFocus(Direction::Right)],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Backspace),
+                        vec![Action::NewPane(None, None, false), TO_NORMAL],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::Esc),
+                        vec![Action::CloseFocus, TO_NORMAL],
+                    ),
+                    (
+                        KeyWithModifier::new(BareKey::End),
+                        vec![Action::ToggleFocusFullscreen, TO_NORMAL],
+                    ),
                 ],
             )],
             ..ModeInfo::default()
@@ -753,6 +827,6 @@ mod tests {
         let ret = keybinds(&mode_info, "quicknav", 500);
         let ret = unstyle(ret);
 
-        assert_eq!(ret, " Ctrl + <a|ENTER|1|SPACE> Move focus / <BACKSPACE> New / <ESC> Close / <END> Fullscreen");
+        assert_eq!(ret, " <BACKSPACE> New / Ctrl + <a|ENTER|1|SPACE> Change Focus / <ESC> Close / <END> Toggle Fullscreen");
     }
 }

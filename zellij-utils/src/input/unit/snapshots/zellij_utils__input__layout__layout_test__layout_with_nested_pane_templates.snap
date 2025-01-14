@@ -1,6 +1,6 @@
 ---
 source: zellij-utils/src/input/./unit/layout_test.rs
-assertion_line: 789
+assertion_line: 855
 expression: "format!(\"{:#?}\", layout)"
 ---
 Layout {
@@ -26,6 +26,11 @@ Layout {
                                 focus: None,
                                 external_children_index: None,
                                 children_are_stacked: false,
+                                is_expanded_in_stack: false,
+                                exclude_from_sync: None,
+                                run_instructions_to_ignore: [],
+                                hide_floating_panes: false,
+                                pane_initial_contents: None,
                             },
                             TiledPaneLayout {
                                 children_split_direction: Horizontal,
@@ -37,6 +42,11 @@ Layout {
                                 focus: None,
                                 external_children_index: None,
                                 children_are_stacked: false,
+                                is_expanded_in_stack: false,
+                                exclude_from_sync: None,
+                                run_instructions_to_ignore: [],
+                                hide_floating_panes: false,
+                                pane_initial_contents: None,
                             },
                             TiledPaneLayout {
                                 children_split_direction: Horizontal,
@@ -52,6 +62,11 @@ Layout {
                                         focus: None,
                                         external_children_index: None,
                                         children_are_stacked: false,
+                                        is_expanded_in_stack: false,
+                                        exclude_from_sync: None,
+                                        run_instructions_to_ignore: [],
+                                        hide_floating_panes: false,
+                                        pane_initial_contents: None,
                                     },
                                     TiledPaneLayout {
                                         children_split_direction: Horizontal,
@@ -63,6 +78,11 @@ Layout {
                                         focus: None,
                                         external_children_index: None,
                                         children_are_stacked: false,
+                                        is_expanded_in_stack: false,
+                                        exclude_from_sync: None,
+                                        run_instructions_to_ignore: [],
+                                        hide_floating_panes: false,
+                                        pane_initial_contents: None,
                                     },
                                 ],
                                 split_size: None,
@@ -71,6 +91,11 @@ Layout {
                                 focus: None,
                                 external_children_index: None,
                                 children_are_stacked: false,
+                                is_expanded_in_stack: false,
+                                exclude_from_sync: None,
+                                run_instructions_to_ignore: [],
+                                hide_floating_panes: false,
+                                pane_initial_contents: None,
                             },
                             TiledPaneLayout {
                                 children_split_direction: Horizontal,
@@ -82,6 +107,11 @@ Layout {
                                 focus: None,
                                 external_children_index: None,
                                 children_are_stacked: false,
+                                is_expanded_in_stack: false,
+                                exclude_from_sync: None,
+                                run_instructions_to_ignore: [],
+                                hide_floating_panes: false,
+                                pane_initial_contents: None,
                             },
                         ],
                         split_size: None,
@@ -90,6 +120,11 @@ Layout {
                         focus: None,
                         external_children_index: None,
                         children_are_stacked: false,
+                        is_expanded_in_stack: false,
+                        exclude_from_sync: None,
+                        run_instructions_to_ignore: [],
+                        hide_floating_panes: false,
+                        pane_initial_contents: None,
                     },
                 ],
                 split_size: None,
@@ -98,6 +133,11 @@ Layout {
                 focus: None,
                 external_children_index: None,
                 children_are_stacked: false,
+                is_expanded_in_stack: false,
+                exclude_from_sync: None,
+                run_instructions_to_ignore: [],
+                hide_floating_panes: false,
+                pane_initial_contents: None,
             },
             [],
         ),
