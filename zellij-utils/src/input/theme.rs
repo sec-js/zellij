@@ -7,7 +7,7 @@ use std::{
     fmt,
 };
 
-use crate::data::Palette;
+use crate::data::Styling;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Deserialize, Serialize)]
 pub struct UiConfig {
@@ -25,17 +25,19 @@ impl UiConfig {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Deserialize, Serialize)]
 pub struct FrameConfig {
     pub rounded_corners: bool,
+    pub hide_session_name: bool,
 }
 
 impl FrameConfig {
     pub fn merge(&self, other: FrameConfig) -> Self {
         let mut merged = self.clone();
         merged.rounded_corners = other.rounded_corners;
+        merged.hide_session_name = other.hide_session_name;
         merged
     }
 }
 
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Themes(HashMap<String, Theme>);
 
 impl fmt::Debug for Themes {
@@ -65,12 +67,16 @@ impl Themes {
     pub fn get_theme(&self, theme_name: &str) -> Option<&Theme> {
         self.0.get(theme_name)
     }
+    pub fn inner(&self) -> &HashMap<String, Theme> {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Theme {
+    pub sourced_from_external_file: bool,
     #[serde(flatten)]
-    pub palette: Palette,
+    pub palette: Styling,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

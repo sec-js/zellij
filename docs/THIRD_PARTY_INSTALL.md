@@ -1,9 +1,10 @@
 # Third Party Install
 
-* [Packages](#package)
+* [Packages](#packages)
     * [Arch Linux](#arch-linux)
     * [MacOS](#macos)
     * [Fedora Linux](#fedora-linux)
+    * [Void Linux](#void-linux)
 
 ## Packages
 
@@ -12,7 +13,7 @@
 [![Packaging status](https://repology.org/badge/vertical-allrepos/zellij.svg)](https://repology.org/project/zellij/versions)
 
 ### Arch Linux
-You can install the `zellij` package from the [official community repository](https://archlinux.org/packages/community/x86_64/zellij/):
+You can install the `zellij` package from the [official extra repository](https://archlinux.org/packages/extra/x86_64/zellij/):
 
 ```
 pacman -S zellij
