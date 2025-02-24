@@ -4,7 +4,7 @@ use insta::assert_snapshot;
 #[test]
 fn empty_layout() {
     let kdl_layout = "layout";
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((TiledPaneLayout::default(), vec![])),
         ..Default::default()
@@ -19,7 +19,7 @@ fn layout_with_one_pane() {
             pane
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -42,7 +42,7 @@ fn layout_with_multiple_panes() {
             pane
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -74,7 +74,7 @@ fn layout_with_nested_panes() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -115,7 +115,7 @@ fn layout_with_floating_panes() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout::default(),
@@ -159,7 +159,7 @@ fn layout_with_mixed_panes_and_floating_panes() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -168,6 +168,36 @@ fn layout_with_mixed_panes_and_floating_panes() {
             },
             vec![FloatingPaneLayout::default()],
         )),
+        ..Default::default()
+    };
+    assert_eq!(layout, expected_layout);
+}
+
+#[test]
+fn layout_with_hidden_floating_panes() {
+    let kdl_layout = r#"
+        layout {
+            tab hide_floating_panes=true {
+                pane
+                pane
+                floating_panes {
+                    pane
+                }
+            }
+        }
+    "#;
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
+    let expected_layout = Layout {
+        tabs: vec![(
+            None,
+            TiledPaneLayout {
+                children: vec![TiledPaneLayout::default(), TiledPaneLayout::default()],
+                hide_floating_panes: true,
+                ..Default::default()
+            },
+            vec![FloatingPaneLayout::default()],
+        )],
+        template: Some((TiledPaneLayout::default(), vec![])),
         ..Default::default()
     };
     assert_eq!(layout, expected_layout);
@@ -188,7 +218,7 @@ fn layout_with_floating_panes_template() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -223,7 +253,7 @@ fn layout_with_shared_tiled_and_floating_panes_template() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -271,7 +301,7 @@ fn layout_with_tabs_and_floating_panes() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -282,7 +312,7 @@ fn layout_with_tabs() {
             tab
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         tabs: vec![(None, TiledPaneLayout::default(), vec![])],
         template: Some((TiledPaneLayout::default(), vec![])),
@@ -306,7 +336,7 @@ fn layout_with_nested_differing_tabs() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         tabs: vec![
             (
@@ -348,7 +378,7 @@ fn layout_with_panes_in_different_mixed_split_sizes() {
             pane size=2;
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -386,7 +416,7 @@ fn layout_with_command_panes() {
             pane command="htop"
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -414,7 +444,7 @@ fn layout_with_command_panes_and_cwd() {
             pane command="htop" cwd="/path/to/my/cwd"
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -445,7 +475,7 @@ fn layout_with_command_panes_and_cwd_and_args() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -477,7 +507,7 @@ fn layout_with_command_panes_and_close_on_exit() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -490,7 +520,7 @@ fn layout_with_command_panes_and_start_suspended() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -504,27 +534,49 @@ fn layout_with_plugin_panes() {
             pane {
                 plugin location="file:/path/to/my/plugin.wasm"
             }
+            pane {
+                plugin location="zellij:status-bar" {
+                    config_key_1 "config_value_1"
+                    "2" true
+                }
+            }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
+    let mut expected_plugin_configuration = BTreeMap::new();
+    expected_plugin_configuration.insert("config_key_1".to_owned(), "config_value_1".to_owned());
+    expected_plugin_configuration.insert("2".to_owned(), "true".to_owned());
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
                 children: vec![
                     TiledPaneLayout {
-                        run: Some(Run::Plugin(RunPlugin {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
                             location: RunPluginLocation::Zellij(PluginTag::new("tab-bar")),
                             _allow_exec_host_cmd: false,
-                        })),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
                         ..Default::default()
                     },
                     TiledPaneLayout {
-                        run: Some(Run::Plugin(RunPlugin {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
                             location: RunPluginLocation::File(PathBuf::from(
                                 "/path/to/my/plugin.wasm",
                             )),
                             _allow_exec_host_cmd: false,
-                        })),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
+                            location: RunPluginLocation::Zellij(PluginTag::new("status-bar")),
+                            _allow_exec_host_cmd: false,
+                            configuration: PluginUserConfiguration(expected_plugin_configuration),
+                            ..Default::default()
+                        }))),
                         ..Default::default()
                     },
                 ],
@@ -544,7 +596,7 @@ fn layout_with_borderless_panes() {
             pane borderless=true
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -568,7 +620,7 @@ fn layout_with_focused_panes() {
             pane focus=true
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -592,7 +644,7 @@ fn layout_with_pane_names() {
             pane name="my awesome pane"
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         template: Some((
             TiledPaneLayout {
@@ -617,7 +669,7 @@ fn layout_with_tab_names() {
             tab name="my cool tab name 2"
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         tabs: vec![
             (
@@ -652,7 +704,7 @@ fn layout_with_focused_tab() {
             tab
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         tabs: vec![
             (None, TiledPaneLayout::default(), vec![]),
@@ -686,7 +738,7 @@ fn layout_with_tab_templates() {
             one-above-one-below
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     let expected_layout = Layout {
         tabs: vec![
             (
@@ -763,7 +815,32 @@ fn layout_with_default_tab_template() {
             tab
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
+    assert_snapshot!(format!("{:#?}", layout));
+}
+
+#[test]
+fn layout_with_new_tab_template() {
+    let kdl_layout = r#"
+        layout {
+            new_tab_template {
+                pane split_direction="vertical" {
+                    pane
+                    pane
+                }
+            }
+            tab name="my first tab" split_direction="Vertical" {
+                pane
+                pane
+            }
+            tab name="my second tab" {
+                pane
+                pane
+            }
+            tab
+        }
+    "#;
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -790,7 +867,7 @@ fn layout_with_pane_templates() {
             left-and-right
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -811,7 +888,7 @@ fn layout_with_tab_and_pane_templates() {
             left-right-and-htop
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -832,7 +909,7 @@ fn layout_with_nested_pane_templates() {
             left-and-right
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -858,7 +935,7 @@ fn layout_with_nested_branched_pane_templates() {
             left-and-right
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -882,7 +959,7 @@ fn circular_dependency_pane_templates_error() {
             one
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "circular dependency detected");
 }
 
@@ -904,7 +981,7 @@ fn children_not_as_first_child_of_tab_template() {
             horizontal-with-vertical-top
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -927,7 +1004,7 @@ fn error_on_more_than_one_children_block_in_tab_template() {
             horizontal-with-vertical-top
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(
         layout.is_err(),
         "error provided for more than one children block"
@@ -952,7 +1029,7 @@ fn children_not_as_first_child_of_pane_template() {
             horizontal-with-vertical-top
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -975,7 +1052,7 @@ fn error_on_more_than_one_children_block_in_pane_template() {
             horizontal-with-vertical-top
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(
         layout.is_err(),
         "error provided for more than one children block"
@@ -1004,7 +1081,18 @@ fn combined_tab_and_pane_template_both_with_children() {
             horizontal-with-vertical-top
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
+    assert_snapshot!(format!("{:#?}", layout));
+}
+
+#[test]
+fn layout_with_pane_excluded_from_sync() {
+    let kdl_layout = r#"
+        layout {
+            pane exclude_from_sync=true
+        }
+    "#;
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1020,7 +1108,7 @@ fn cannot_define_tab_template_name_with_space() {
             pane
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided for tab name with space");
 }
 
@@ -1036,7 +1124,7 @@ fn cannot_define_pane_template_name_with_space() {
             pane
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided for tab name with space");
 }
 
@@ -1050,7 +1138,7 @@ fn cannot_define_panes_and_tabs_on_same_level() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(
         layout.is_err(),
         "error provided for tab and pane on the same level"
@@ -1084,7 +1172,7 @@ fn cannot_define_tab_template_names_as_keywords() {
         ",
             keyword
         );
-        let layout = Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None);
+        let layout = Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None);
         assert!(
             layout.is_err(),
             "{}",
@@ -1122,7 +1210,7 @@ fn cannot_define_pane_template_names_as_keywords() {
         ",
             keyword
         );
-        let layout = Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None);
+        let layout = Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None);
         assert!(
             layout.is_err(),
             "{}",
@@ -1143,7 +1231,7 @@ fn error_on_multiple_layout_nodes_in_file() {
     "
     );
     let layout_error =
-        Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1159,7 +1247,7 @@ fn error_on_unknown_layout_node() {
     "
     );
     let layout_error =
-        Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1173,7 +1261,7 @@ fn error_on_unknown_layout_pane_property() {
     "
     );
     let layout_error =
-        Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1187,7 +1275,7 @@ fn error_on_unknown_layout_pane_template_property() {
     "
     );
     let layout_error =
-        Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1201,7 +1289,7 @@ fn error_on_unknown_layout_tab_property() {
     "
     );
     let layout_error =
-        Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1215,7 +1303,7 @@ fn error_on_unknown_layout_tab_template_property() {
     "
     );
     let layout_error =
-        Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1233,7 +1321,7 @@ fn error_on_pane_templates_without_a_name() {
     "
     );
     let layout_error =
-        Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1251,7 +1339,7 @@ fn error_on_tab_templates_without_a_name() {
     "
     );
     let layout_error =
-        Layout::from_kdl(&kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(&kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1265,7 +1353,7 @@ fn error_on_more_than_one_focused_tab() {
         }
     "#;
     let layout_error =
-        Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap_err();
+        Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap_err();
     assert_snapshot!(format!("{:?}", layout_error));
 }
 
@@ -1283,7 +1371,7 @@ fn args_override_args_in_template() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1301,7 +1389,7 @@ fn close_on_exit_overrides_close_on_exit_in_template() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1318,7 +1406,7 @@ fn args_added_to_args_in_template() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1335,7 +1423,7 @@ fn close_on_exit_added_to_close_on_exit_in_template() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1353,7 +1441,7 @@ fn cwd_override_cwd_in_template() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1370,7 +1458,7 @@ fn cwd_added_to_cwd_in_template() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1383,7 +1471,7 @@ fn error_on_mixed_command_and_child_panes() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided");
 }
 
@@ -1397,7 +1485,7 @@ fn error_on_mixed_cwd_and_child_panes() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided");
 }
 
@@ -1410,7 +1498,7 @@ fn error_on_bare_args_without_command() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided");
 }
 
@@ -1423,7 +1511,7 @@ fn error_on_bare_close_on_exit_without_command() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided");
 }
 
@@ -1437,7 +1525,7 @@ fn error_on_bare_args_in_template_without_command() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided");
 }
 
@@ -1451,7 +1539,7 @@ fn error_on_bare_close_on_exit_in_template_without_command() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided");
 }
 
@@ -1470,7 +1558,7 @@ fn pane_template_command_with_cwd_overriden_by_its_consumers_command_cwd() {
             // pane should have /tmp/foo and not /tmp/bar as cwd
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1487,7 +1575,7 @@ fn pane_template_command_with_cwd_remains_when_its_consumer_command_does_not_hav
             // pane should have /tmp/bar as its cwd with the pwd command
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1505,7 +1593,7 @@ fn pane_template_command_without_cwd_is_overriden_by_its_consumers_cwd() {
             // pane should have /tmp/bar as its cwd with the pwd command
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1524,7 +1612,7 @@ fn pane_template_command_with_cwd_is_overriden_by_its_consumers_bare_cwd() {
             // pane should have /tmp/bar as its cwd with the tail command
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1542,7 +1630,7 @@ fn pane_template_command_without_cwd_receives_its_consumers_bare_cwd() {
             // pane should have /tmp/bar as its cwd with the tail command
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1560,7 +1648,7 @@ fn pane_template_with_bare_cwd_overriden_by_its_consumers_bare_cwd() {
             // pane should have /tmp/foo without a command
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1576,7 +1664,7 @@ fn pane_template_with_bare_propagated_to_its_consumer_command_without_cwd() {
             // pane should have /tmp/foo with the tail command
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1594,7 +1682,7 @@ fn pane_template_with_bare_propagated_to_its_consumer_command_with_cwd() {
             // pane should have /tmp/bar with the tail command
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1610,7 +1698,7 @@ fn pane_template_with_bare_propagated_to_its_consumer_edit() {
             // pane should have /tmp/foo/bar with the edit file variant
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1626,7 +1714,7 @@ fn pane_template_with_command_propagated_to_its_consumer_edit() {
             // pane should have /tmp/foo/bar with the edit file variant
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1640,7 +1728,7 @@ fn global_cwd_given_to_panes_without_cwd() {
             // both should have the /tmp cwd
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1653,7 +1741,7 @@ fn global_cwd_prepended_to_panes_with_cwd() {
             pane command="tail" cwd="/home/foo" // should be /home/foo because its an absolute path
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1669,7 +1757,7 @@ fn global_cwd_passed_from_layout_constructor() {
     "#;
     let layout = Layout::from_kdl(
         kdl_layout,
-        "layout_file_name".into(),
+        Some("layout_file_name".into()),
         None,
         Some(PathBuf::from("/tmp")),
     )
@@ -1690,7 +1778,7 @@ fn global_cwd_passed_from_layout_constructor_overrides_global_cwd_in_layout_file
     "#;
     let layout = Layout::from_kdl(
         kdl_layout,
-        "layout_file_name".into(),
+        Some("layout_file_name".into()),
         None,
         Some(PathBuf::from("/tmp")),
     )
@@ -1710,7 +1798,7 @@ fn global_cwd_with_tab_cwd_given_to_panes_without_cwd() {
             // both should have the /tmp/foo cwd
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1725,7 +1813,7 @@ fn tab_cwd_given_to_panes_without_cwd() {
             // both should have the /tmp cwd
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1740,7 +1828,7 @@ fn tab_cwd_prepended_to_panes_with_cwd() {
             // both should have the /tmp/foo cwd
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1755,7 +1843,7 @@ fn global_cwd_and_tab_cwd_prepended_to_panes_with_and_without_cwd() {
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1776,7 +1864,7 @@ fn global_cwd_and_tab_cwd_prepended_to_panes_with_and_without_cwd_in_pane_templa
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1795,7 +1883,7 @@ fn global_cwd_and_tab_cwd_prepended_to_panes_with_and_without_cwd_in_tab_templat
             }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1842,7 +1930,7 @@ fn can_load_swap_layouts_from_a_different_file() {
     "#;
     let layout = Layout::from_kdl(
         kdl_layout,
-        "layout_file_name".into(),
+        Some("layout_file_name".into()),
         Some(("swap_layout_file_name".into(), kdl_swap_layout)),
         None,
     )
@@ -1860,7 +1948,7 @@ fn can_define_stacked_children_for_pane_node() {
            }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1877,7 +1965,22 @@ fn can_define_stacked_children_for_pane_template() {
            }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None).unwrap();
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
+    assert_snapshot!(format!("{:#?}", layout));
+}
+
+#[test]
+fn can_define_a_stack_with_an_expanded_pane() {
+    let kdl_layout = r#"
+        layout {
+           pane stacked=true {
+               pane
+               pane expanded=true
+               pane
+           }
+        }
+    "#;
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
     assert_snapshot!(format!("{:#?}", layout));
 }
 
@@ -1888,7 +1991,21 @@ fn cannot_define_stacked_panes_for_bare_node() {
            pane stacked=true
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
+    assert!(layout.is_err(), "error provided for tab name with space");
+}
+
+#[test]
+fn cannot_define_an_expanded_pane_outside_of_a_stack() {
+    let kdl_layout = r#"
+        layout {
+            pane {
+                pane
+                pane expanded=true
+            }
+        }
+    "#;
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided for tab name with space");
 }
 
@@ -1902,7 +2019,7 @@ fn cannot_define_stacked_panes_with_vertical_split_direction() {
            }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided for tab name with space");
 }
 
@@ -1919,7 +2036,7 @@ fn cannot_define_stacked_panes_with_grandchildren() {
            }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided for tab name with space");
 }
 
@@ -1939,6 +2056,189 @@ fn cannot_define_stacked_panes_with_grandchildren_in_pane_template() {
            }
         }
     "#;
-    let layout = Layout::from_kdl(kdl_layout, "layout_file_name".into(), None, None);
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
     assert!(layout.is_err(), "error provided for tab name with space");
+}
+
+#[test]
+fn run_plugin_location_parsing() {
+    let kdl_layout = r#"
+        layout {
+            pane {
+                plugin location="zellij:tab-bar"
+            }
+            pane {
+                plugin location="file:/path/to/my/plugin.wasm"
+            }
+            pane {
+                plugin location="file:plugin.wasm"
+            }
+            pane {
+                plugin location="file:relative/with space/plugin.wasm"
+            }
+            pane {
+                plugin location="file:///absolute/with space/plugin.wasm"
+            }
+            pane {
+                plugin location="file:c:/absolute/windows/plugin.wasm"
+            }
+            pane {
+                plugin location="filepicker"
+            }
+            pane {
+                plugin location="https://example.com/plugin.wasm"
+            }
+        }
+    "#;
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None).unwrap();
+    let expected_layout = Layout {
+        template: Some((
+            TiledPaneLayout {
+                children: vec![
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
+                            _allow_exec_host_cmd: false,
+                            location: RunPluginLocation::Zellij(PluginTag::new("tab-bar")),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
+                            _allow_exec_host_cmd: false,
+                            location: RunPluginLocation::File(PathBuf::from(
+                                "/path/to/my/plugin.wasm",
+                            )),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
+                            _allow_exec_host_cmd: false,
+                            location: RunPluginLocation::File(PathBuf::from("plugin.wasm")),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
+                            _allow_exec_host_cmd: false,
+                            location: RunPluginLocation::File(PathBuf::from(
+                                "relative/with space/plugin.wasm",
+                            )),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
+                            _allow_exec_host_cmd: false,
+                            location: RunPluginLocation::File(PathBuf::from(
+                                "/absolute/with space/plugin.wasm",
+                            )),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
+                            _allow_exec_host_cmd: false,
+                            location: RunPluginLocation::File(PathBuf::from(
+                                "c:/absolute/windows/plugin.wasm",
+                            )),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::Alias(PluginAlias {
+                            name: "filepicker".to_owned(),
+                            configuration: Some(PluginUserConfiguration::default()),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                    TiledPaneLayout {
+                        run: Some(Run::Plugin(RunPluginOrAlias::RunPlugin(RunPlugin {
+                            _allow_exec_host_cmd: false,
+                            location: RunPluginLocation::Remote(String::from(
+                                "https://example.com/plugin.wasm",
+                            )),
+                            configuration: Default::default(),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            },
+            vec![],
+        )),
+        ..Default::default()
+    };
+    assert_eq!(layout, expected_layout);
+}
+
+#[test]
+fn env_var_expansion() {
+    let raw_layout = r#"
+        layout {
+            // cwd tests + composition
+            cwd "$TEST_GLOBAL_CWD"
+            pane cwd="relative"  // -> /abs/path/relative
+            pane cwd="/another/abs"  // -> /another/abs
+            pane cwd="$TEST_LOCAL_CWD"  // -> /another/abs
+            pane cwd="$TEST_RELATIVE"  // -> /abs/path/relative
+            pane command="ls" cwd="$TEST_ABSOLUTE"  // -> /somewhere
+            pane edit="file.rs" cwd="$TEST_ABSOLUTE"  // -> /somewhere/file.rs
+            pane edit="file.rs" cwd="~/backup"  // -> /home/aram/backup/file.rs
+
+            // other paths
+            pane command="~/backup/executable"  // -> /home/aram/backup/executable
+            pane edit="~/backup/foo.txt"  // -> /home/aram/backup/foo.txt
+        }
+    "#;
+    let env_vars = [
+        ("TEST_GLOBAL_CWD", "/abs/path"),
+        ("TEST_LOCAL_CWD", "/another/abs"),
+        ("TEST_RELATIVE", "relative"),
+        ("TEST_ABSOLUTE", "/somewhere"),
+        ("HOME", "/home/aram"),
+    ];
+    let mut old_vars = Vec::new();
+    // set environment variables for test, keeping track of existing values.
+    for (key, value) in env_vars {
+        old_vars.push((key, std::env::var(key).ok()));
+        std::env::set_var(key, value);
+    }
+    let layout = Layout::from_kdl(raw_layout, Some("layout_file_name".into()), None, None);
+    // restore environment.
+    for (key, opt) in old_vars {
+        match opt {
+            Some(value) => std::env::set_var(key, &value),
+            None => std::env::remove_var(key),
+        }
+    }
+    let layout = layout.unwrap();
+    assert_snapshot!(format!("{layout:#?}"));
+}
+
+#[test]
+fn env_var_missing() {
+    std::env::remove_var("SOME_UNIQUE_VALUE");
+    let kdl_layout = r#"
+        layout {
+            cwd "$SOME_UNIQUE_VALUE"
+            pane cwd="relative"
+        }
+    "#;
+    let layout = Layout::from_kdl(kdl_layout, Some("layout_file_name".into()), None, None);
+    assert!(layout.is_err(), "invalid env var lookup should fail");
 }
