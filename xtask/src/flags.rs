@@ -9,7 +9,7 @@ xflags::xflags! {
     cmd xtask {
         /// Deprecation warning. Compatibility to transition from `cargo make`.
         cmd deprecated {
-            repeated args: OsString
+            repeated _args: OsString
         }
 
         /// Tasks for the CI
@@ -38,6 +38,12 @@ xflags::xflags! {
         cmd publish {
             /// Perform a dry-run (don't push/publish anything)
             optional --dry-run
+            /// Publish but don't push a commit to git (only works with '--cargo-registry')
+            optional --no-push
+            /// Push commit to custom git remote
+            optional --git-remote remote: OsString
+            /// Publish crates to custom registry
+            optional --cargo-registry registry: OsString
         }
 
         /// Package zellij for distribution (result found in ./target/dist)
@@ -61,10 +67,14 @@ xflags::xflags! {
 
         /// Run debug version of zellij
         cmd run {
+            /// Take plugins from asset folder, skip building plugins.
+            optional --quick-run
             /// Take plugins from here, skip building plugins. Passed to zellij verbatim
             optional --data-dir path: PathBuf
             /// Enable the singlepass compiler for WASM plugins
             optional --singlepass
+            /// Disable optimizing dependencies
+            optional --disable-deps-optimize
             /// Arguments to pass after `cargo run --`
             repeated args: OsString
         }
@@ -118,7 +128,7 @@ pub enum XtaskCmd {
 
 #[derive(Debug)]
 pub struct Deprecated {
-    pub args: Vec<OsString>,
+    pub _args: Vec<OsString>,
 }
 
 #[derive(Debug)]
@@ -151,6 +161,9 @@ pub struct Manpage;
 #[derive(Debug)]
 pub struct Publish {
     pub dry_run: bool,
+    pub no_push: bool,
+    pub git_remote: Option<OsString>,
+    pub cargo_registry: Option<OsString>,
 }
 
 #[derive(Debug)]
@@ -174,9 +187,10 @@ pub struct Install {
 pub struct Run {
     pub args: Vec<OsString>,
 
+    pub quick_run: bool,
     pub data_dir: Option<PathBuf>,
-
     pub singlepass: bool,
+    pub disable_deps_optimize: bool,
 }
 
 #[derive(Debug)]

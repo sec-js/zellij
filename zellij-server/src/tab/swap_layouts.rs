@@ -40,12 +40,14 @@ impl SwapLayouts {
         let mut base_swap_floating_layout = BTreeMap::new();
         let tiled_panes_count = layout.0.pane_count();
         let floating_panes_count = layout.1.len();
-        // we set MaxPanes to the current panes in the layout, because the base layout is not
+        // we set ExactPanes to the current panes in the layout, because the base layout is not
         // intended to be progressive - i.e. to have additional panes added to it
+        // we also don't want it to be applied for less than the expected amount of panes, because
+        // then unintended things can happen
         // we still want to keep it around in case we'd like to swap layouts without adding panes
-        base_swap_tiled_layout.insert(LayoutConstraint::MaxPanes(tiled_panes_count), layout.0);
+        base_swap_tiled_layout.insert(LayoutConstraint::ExactPanes(tiled_panes_count), layout.0);
         base_swap_floating_layout
-            .insert(LayoutConstraint::MaxPanes(floating_panes_count), layout.1);
+            .insert(LayoutConstraint::ExactPanes(floating_panes_count), layout.1);
         self.swap_tiled_layouts
             .insert(0, (base_swap_tiled_layout, Some("BASE".into())));
         self.swap_floating_layouts
@@ -58,6 +60,9 @@ impl SwapLayouts {
     }
     pub fn set_is_tiled_damaged(&mut self) {
         self.is_tiled_damaged = true;
+    }
+    pub fn reset_floating_damage(&mut self) {
+        self.is_floating_damaged = false;
     }
     pub fn is_floating_damaged(&self) -> bool {
         self.is_floating_damaged
@@ -174,6 +179,9 @@ impl SwapLayouts {
             LayoutConstraint::MinPanes(min_panes) => {
                 tiled_panes.visible_panes_count() >= *min_panes
             },
+            LayoutConstraint::ExactPanes(pane_count) => {
+                tiled_panes.visible_panes_count() == *pane_count
+            },
             LayoutConstraint::NoConstraint => true,
         }
     }
@@ -188,6 +196,9 @@ impl SwapLayouts {
             },
             LayoutConstraint::MinPanes(min_panes) => {
                 floating_panes.visible_panes_count() >= *min_panes
+            },
+            LayoutConstraint::ExactPanes(pane_count) => {
+                floating_panes.visible_panes_count() == *pane_count
             },
             LayoutConstraint::NoConstraint => true,
         }
@@ -236,12 +247,18 @@ impl SwapLayouts {
                 Some(swap_layout) => {
                     for (constraint, layout) in swap_layout.0.iter() {
                         if self.state_fits_tiled_panes_constraint(constraint, tiled_panes) {
+                            let focus_layout_if_not_focused = true;
                             let display_area = self.display_area.borrow();
                             // TODO: reuse the assets from position_panes_in_space here?
                             let pane_count = tiled_panes.visible_panes_count();
                             let display_area = PaneGeom::from(&*display_area);
                             if layout
-                                .position_panes_in_space(&display_area, Some(pane_count))
+                                .position_panes_in_space(
+                                    &display_area,
+                                    Some(pane_count),
+                                    false,
+                                    focus_layout_if_not_focused,
+                                )
                                 .is_ok()
                             {
                                 return Some(layout.clone());
@@ -258,27 +275,6 @@ impl SwapLayouts {
                 break;
             }
         }
-        None
-    }
-    pub fn best_effort_tiled_layout(
-        &mut self,
-        tiled_panes: &TiledPanes,
-    ) -> Option<TiledPaneLayout> {
-        for swap_layout in self.swap_tiled_layouts.iter() {
-            for (_constraint, layout) in swap_layout.0.iter() {
-                let display_area = self.display_area.borrow();
-                // TODO: reuse the assets from position_panes_in_space here?
-                let pane_count = tiled_panes.visible_panes_count();
-                let display_area = PaneGeom::from(&*display_area);
-                if layout
-                    .position_panes_in_space(&display_area, Some(pane_count))
-                    .is_ok()
-                {
-                    return Some(layout.clone());
-                }
-            }
-        }
-        log::error!("Could not find layout that would fit on screen!");
         None
     }
 }

@@ -1,10 +1,11 @@
 ---
 source: src/tests/e2e/cases.rs
-assertion_line: 1167
+assertion_line: 1500
 expression: last_snapshot
 ---
- Zellij (e2e-test)  Tab #1                                                                                            
+ Zellij (e2e-test)  Tab #1 
 $                                                          │$ █                                                         
+$                                                          │                                                            
                                                            │                                                            
                                                            │                                                            
                                                            │                                                            
@@ -25,5 +26,4 @@ $                                                          │$ █
                                                            │                                                            
                                                            │                                                            
                                                            │                                                            
- Ctrl + <g> LOCK  <p> PANE  <t> TAB  <n> RESIZE  <h> MOVE  <s> SEARCH  <o> SESSION  <q> QUIT  BASE   
- Tip: Alt + <n> => new pane. Alt + <←↓↑→> or Alt + <hjkl> => navigate. Alt + <+|-> => resize pane.                      
+ Ctrl + <g> LOCK  <p> PANE  <t> TAB  <n> RESIZE  <h> MOVE  <s> SEARCH  <o> SESSION  <q> QUIT       ... 
